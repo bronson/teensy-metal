@@ -24,7 +24,7 @@
 
 
 # Target file name (without extension).
-TARGET = waiter
+TARGET = watcher
 
 
 # List C source files here. (C dependencies are automatically generated.)

@@ -9,7 +9,7 @@ Here's some research.
   takes around 1 second for usb_debug_only to connect, and that the first ~16 characters
   are buffered.
 
-* waiter: (rename me) shows status of buttons.  Shows how to do do simple I/O.
+* watcher: (rename me) shows status of D3.  Demonstrates simple I/O.
 
 
 ## Thoughts

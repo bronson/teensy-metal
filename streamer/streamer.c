@@ -20,6 +20,5 @@ int main(void)
         pstr(buf);
         pchar('\n');
         i += 1;
-        _delay_ms(12);
     }
 }
