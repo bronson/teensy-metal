@@ -5,6 +5,9 @@ Here's some research.
 
 ## Test Programs
 
+Most of these programs come configured for the Teensy++2.0 but
+check the Makefile to be sure.
+
 * streamer: writes messages that hid_listen can read.  It shows that it
   takes around 1 second for usb_debug_only to connect, and that the first ~16 characters
   are buffered.
