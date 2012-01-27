@@ -3,28 +3,22 @@
 Uses PWM to output "breathing" lights on pins B5 and B6.
 
 
-Timer0: 8 bit (8 bit prescaler or T0 pin)
-Timer1: 16 bit (prescaler or T1 pin)
-Timer2: 8 bit (10 bit prescaler or TOSC1 or TOSC1/TOSC2 (crystal) pins, asynchronous operation)
-      (async means that outputs can appear independent of being clocked by MCU)
-Timer3: 16 bit (prescaler only?)
-
-
 The Teensy++ 2.0 has two pwm modes: fast and phase-correct.  Fast just uses a sawtooth wave, counting up from 0 to TOP
 For 8-bit timer, TOP is either FF or OCRA depending on setting of WGM
-  OCRA is a bug right?  Is that supposed to be OCR0A?
+> All occurrences of OCRA in the docs are wrong?  Is that supposed to be OCR0A?
 
 
-Available OC pins on the Teensy++ 2.0:
-  OC0A OC0B       -- timer/counter 0
-  OC1A OC1B OC1C  -- 
-  OC2A OC2B
-  OC3A OC3B OC3C
+Available output compare pins on the Teensy++ 2.0:
+- OC0A OC0B -- works with  8-bit timer/counter 0 (8 bit prescaler or T0 pin)
+- OC1A OC1B OC1C -- works with 16 bit timer/counter 1 (prescaler or T1 pin)  also ICP1 to use external trigger to capture clock value
+- OC2A OC2B -- works with  8 bit timer/counter 2 (8 bit prescaler or TOSC1 or TOSC1/TOSC2, async)
+- OC3A OC3B OC3C -- works with 16 bit timer/counter 3, same as OC1?   also ICP3
 
-The rogues gallery of 8-bit timer registers:
+The rogues gallery of 8-bit timer0 registers:
+{{{
   TCNT0 -- current timer value.  controlled using TCCR0A and TCCR0B
     writing to TCNT0 clears compare match.
-  OC0A OC0B OC1A etc. -- output compare output pins
+  OC0A OC0B etc. -- output compare output pins
     set up OC0x before setting DDR for the pin output
   OCR0A OCR0B -- output compare register, continuously compared to TCNT0
       match generates an output compare interrupt or a waveform on the OC0x pin
@@ -49,10 +43,6 @@ The rogues gallery of 8-bit timer registers:
   TIFR0 -- timer 0 interrupt flag register: flags indicating matches happened, clear by writing 1
   TOV0 -- Timer/Counter Overflow Flag, set when counter reaches bottom (only PCPWM?)
 
-
-16-bit timer registers:
-  OCF1C OCF1B OCF1A -
-
 Timer modes:
   WGM0 2:0 = 0: normal: counting direction is up until TOP, starts over at 0, no counter clear.  no double buffering, write counter value at any time.
   WGM0 2:0 = 2: clear timer on compare: counter is reset to 0 when it matches OCR0A.  Therefore OCR0A defines the top.
@@ -70,9 +60,37 @@ Timer modes:
 If TCNT0 equals OCR0A or OCR0B then the corresponding output compare flag OCF0A or OCF0B is set at the next timer clock.
 The OCF can be reset by writing a 1 to its bit location.
 If the corresponding interrupt is enabled, an output compare interrupt will be triggered (the OCF is cleared (before?) the
-ISR runs).  
+ISR runs).
 
   The word's most confusing name, force output compare FOC0A or FOC0B can be used to force the output comparator to trigger
   (doesn't change the timer or set the OCF0x flag, but apparently the OC0x pin goes high)
 
 ISR(TIMER0_COMPA_vect) { ... }  If TIMSK0 = 2, we'll interrupt when timer0 (TCNT0?) == OCR0A
+
+
+16-bit timer registers:    n is timer number (1 or 3), x is the output compare channel (a or b)
+  TCNT1H, TCNT1L, TCNT3H, TCNT3L -- write the high byte first. it gets stored in a shared temp reg and written all at once.  read low byte first.
+    You can access the entire register in C and the compiler will do the right thing: TCNT1 = 0x1FF;
+    If an interrupt modifies a 16 bit register, the main code must disable interrupts when performing 16-bit accesses.
+  TCCR1A TCCR3A
+    COM1A COM1B COM1C COM3A COM3B COM3C -- 0=normal, 1=CTC (toggle), 2=clear OCnx on match, 3=set on match
+    WGM1 WGM3 -- waveform generation, table 14-4: normal, fast or pc pwm (8,9,10 bit), pc&fc pwm
+  TCCR1B TCCR3B
+    ICNC1 ICN3 -- input capture noise canceller
+    ICES1 ICES3 -- input capture edge select
+    WGM1 WGM3 -- see TCCR1A/TCCR3A
+    CS1, CS3 -- clock select: 0=stopped, 1=CLKio/1, 2=/8 3=/64 4=/256 5=/1024 6=clock on Tn pin, falling edge, 7=rising edge
+  TCCR1C TCCR3C
+    FOC1A FOC1B FOC1C FOC3A FOC3B FOC3C -- force output compare match
+  OCR1A(HL), OCR1B(HL), OCR1C(HL), OCR3A(HL), OCR3B(HL), OCR3C(HL) -- output compare register
+  ICR1H ICR1L ICR3H ICR3L -- input capture register
+  TIMSK1 -- timer/counter 1 interrupt mask register
+    ICIE1 ICIE3 -- input capture interrupt enable
+    OCIE1A OCIE1B OCIE1C OCIE3A OCIE3B OCIE3C -- output compare interrupt enables
+  TIFR1 TIFR3 -- timer interrupt flag register
+    ICF1 ICF3: set when input capture fires
+    OCF1A OCF1B OCF1C OCF3A OCF3B OCF3C: output compare fires
+    TOV1 TOV3: timer overflow interrupt fired.  See table 14-4 for behavior.
+  PRTIM1, PRTIM3 -- power reduction timer, write one to disable or zero to enable the corresponding timer.  they come powered up.
+  OCF1C OCF1B OCF1A -
+}}}
