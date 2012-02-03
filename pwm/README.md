@@ -3,7 +3,7 @@
 Uses PWM to output "breathing" lights on pins B5 and B6.
 
 
-The Teensy++ 2.0 has two pwm modes: fast and phase-correct.  Fast just uses a sawtooth wave, counting up from 0 to TOP
+The Teensy++ 2.0 has two wm modes: fast and phase-correct.  Fast just uses a sawtooth wave, counting up from 0 to TOP
 For 8-bit timer, TOP is either FF or OCRA depending on setting of WGM
 > All occurrences of OCRA in the docs are wrong?  Is that supposed to be OCR0A?
 
@@ -68,8 +68,9 @@ ISR runs).
 ISR(TIMER0_COMPA_vect) { ... }  If TIMSK0 = 2, we'll interrupt when timer0 (TCNT0?) == OCR0A
 
 
-16-bit timer registers:    n is timer number (1 or 3), x is the output compare channel (a or b)
-  TCNT1H, TCNT1L, TCNT3H, TCNT3L -- write the high byte first. it gets stored in a shared temp reg and written all at once.  read low byte first.
+16-bit timer1 registers:    n is timer number (1 or 3), x is the output compare channel (a or b)
+  TCNT1H, TCNT1L, TCNT3H, TCNT3L -- the counter
+    write the high byte first. it gets stored in a shared temp reg and written all at once.  read low byte first.
     You can access the entire register in C and the compiler will do the right thing: TCNT1 = 0x1FF;
     If an interrupt modifies a 16 bit register, the main code must disable interrupts when performing 16-bit accesses.
   TCCR1A TCCR3A
@@ -93,4 +94,37 @@ ISR(TIMER0_COMPA_vect) { ... }  If TIMSK0 = 2, we'll interrupt when timer0 (TCNT
     TOV1 TOV3: timer overflow interrupt fired.  See table 14-4 for behavior.
   PRTIM1, PRTIM3 -- power reduction timer, write one to disable or zero to enable the corresponding timer.  they come powered up.
   OCF1C OCF1B OCF1A -
+
+
+8-bit timer2 registers:
+  The big difference between this and timer0 is the option of using a crystal to get much more accurate timing.
+  First, PRTIM2 in PRR0 must be 0 so this timer is powered.
+  TCNT2 -- the counter
+  TCCR2A timer/counter control register
+    COM2A COM2B -- tells if output pin should be ignored, toggled, set, or cleared on match, or inverted if in PWM mode.
+    WGM20 WGM21 -- configures the CTC or PWM settings
+  TCCR2B timer/counter control register
+    FOC2A FOC2B -- force output compare; pretend that a compare was triggered
+    WGM22 -- upper bit of WGM2
+  OCR2A OCR2B -- output compare register, match affects output pin depending on setting of COM2A COM2B.
+  ASSR -- this is the only meaningful difference between this and timer0
+    EXCLK -- if 1 then external clock is on TOSC1 pin instead of using a crystal.
+    AS2 -- asynchronous timer/counter 2: 0 means use CLKio, 1 means use external clock.
+      Writing can corrupt some registers so write AS2 before TCNT2, OCR2A, OCR2B, TCCR2A and TCCR2B
+    TCN2UB -- Timer/Counter 2 Update Busy: when operating async, indicates a write to TCNT2 is pending so don't write to it
+      If you do, you might corrupt the value being set and/or cause a spurious interrupt.
+    OCR2AUB OCR2BUB -- Output Compare Register 2 Busy: when operating async, indicates a write to OCR2A OCR2B is pending.
+    TCR2AUB TCR2BUB -- Timer/Counter Control Register 2 Update Busy: when operating async, a write to TCCR2A TCCR2B is pending.
+  TIMSK2 -- timer/counter 1 interrupt mask register
+    TOIE2 -- enable Timer/Counter 2 Overflow Interrupt
+    OCIE2A OCIE2B -- enable Output Compare interrupts (fire when OCR2A OCR2B matches TCNT2)
+  TIFR2 -- timer interrupt flag register
+    OCF2A OCF2B: Output Compare Flag: gets set to 1 when a compare match occurs between TCNT2 and OCR2A OCR2B.
+    TOV2: Timer Overflow Flag: timer overflow interrupt has fired.
+  GTCCR -- General Timer/Counter Control Register
+    TSM -- Timer/Counter Synchronization Mode: keeps timers halted until cleared so clocks can be synchronized.
+    PSRASY -- Prescaler Reset Timer/Counter 2: resets timer2, remains 1 until the prescaler has reset.  Not cleared if TSM is set.
+    PSRSYNC -- if 1, all prescalers are being reset.
+
 }}}
+
