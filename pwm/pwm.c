@@ -1,25 +1,12 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdlib.h>
+#include "avrpwm.h"
 #include "utils.h"
-#include "print.h"
 
 // If you have LEDs connected to B5 and B6, they will be flashed using the 16 bit PWM.
 // This demonstrates both simple levels and continuous ramps.
 
-
-void clock1_init(void)
-{
-    // set up the clock 1 PWM:
-    //   TCCR1A.COM1A=3    active high pwm on 1A
-    //   TCCR1A.COM1B=3    active high pwm on 1B
-    //   TCCR1A.WGM0=3     10 bit phase correct pwm: 0-0x3FF
-    //   TCCR1B.WGM2=0     WGM=3 so upper 2 bits are 0
-    //   TCCR1B.CS=5       5=CLKio/1024/cycle or 15Hz
-    TCCR1A = (3<<COM1A0) | (3<<COM1B0) | (3<<WGM10);
-    TCCR1B = (0<<WGM12)  | (1<<CS10);
-    #define max 0x3FF
-}
 
 
 // CLKPR determines CLKio: 1/1 - 1/256 (16MHz - 62.5KHz)
@@ -27,7 +14,7 @@ void clock1_init(void)
 //      for a 10 bit cycle, a 16 MHz count becomes a 15625 Hz cycle
 //      and a 15 KHz count becomes a 15Hz cycle.  You can see this with your own eyes.
 
-void flash_leds(void)
+void flash_leds(int max)
 {
     // 0=off, max=maximum brightness
     while(1) {
@@ -43,7 +30,7 @@ void flash_leds(void)
 }
 
 
-void breathe_leds(void)
+void breathe_leds(int max)
 {
     int i=0, j=0;              // current value of each led
     int idelta=4, jdelta=14;   // rate of change of the led (leds are incremented 100 times a second, range is 0..max)
@@ -87,20 +74,30 @@ void breathe_leds(void)
 }
 
 
-void main(void) __attribute__((noreturn));
-void main(void)
+int main(void) __attribute__((noreturn));
+int main(void)
 {
+#if F_CPU == 16000000UL
     CPU_PRESCALE(CPU_16MHz);
-    usb_init();
-    clock1_init();
+#else
+#error prescaler set up wrong
+#endif
+
+    unsigned int clock1_max = 0x3FF;
+    clock1_init(
+            CS_clkio,        // don't prescale, run straight off CLKio
+            WGM1_phase_correct_pwm_to_3FF,
+            COM_pwm_normal,  // active high pwm on OCR1A
+            COM_pwm_normal   // active high pwm on OCR1B
+            );
 
     DDRB = (1<<5) | (1<<6);   // CONFIGURE PB5 and PB6 for output, everything else is input
 
     // change the if statement to select the demo
     if(0) {
-        flash_leds();
+        flash_leds(clock1_max);
     } else {
-        breathe_leds();
+        breathe_leds(clock1_max);
     }
 
     while(1) { }
