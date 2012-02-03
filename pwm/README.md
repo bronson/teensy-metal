@@ -1,21 +1,21 @@
-## Watcher
+## PWM
 
 Uses PWM to output "breathing" lights on pins B5 and B6.
 
 
-The Teensy++ 2.0 has two wm modes: fast and phase-correct.  Fast just uses a sawtooth wave, counting up from 0 to TOP
+The Teensy++ 2.0 has two PWM modes: fast and phase-correct.  Fast just uses a sawtooth wave, counting up from 0 to TOP.
+Modifying the duty cycle for fast can glitch frequencies, for phase-correct, it can't.
 For 8-bit timer, TOP is either FF or OCRA depending on setting of WGM
-> All occurrences of OCRA in the docs are wrong?  Is that supposed to be OCR0A?
 
 
 Available output compare pins on the Teensy++ 2.0:
-- OC0A OC0B -- works with  8-bit timer/counter 0 (8 bit prescaler or T0 pin)
-- OC1A OC1B OC1C -- works with 16 bit timer/counter 1 (prescaler or T1 pin)  also ICP1 to use external trigger to capture clock value
-- OC2A OC2B -- works with  8 bit timer/counter 2 (8 bit prescaler or TOSC1 or TOSC1/TOSC2, async)
-- OC3A OC3B OC3C -- works with 16 bit timer/counter 3, same as OC1?   also ICP3
 
-The rogues gallery of 8-bit timer0 registers:
-{{{
+* OC1A OC1B OC1C -- works with 16 bit timer/counter 1 (prescaler or T1 pin)  also ICP1 to use external trigger to capture clock value
+* OC2A OC2B -- works with  8 bit timer/counter 2 (8 bit prescaler or TOSC1 or TOSC1/TOSC2, async)
+* OC3A OC3B OC3C -- works with 16 bit timer/counter 3, same as OC1?   also ICP3
+
+### Timer 0 Registers
+```
   TCNT0 -- current timer value.  controlled using TCCR0A and TCCR0B
     writing to TCNT0 clears compare match.
   OC0A OC0B etc. -- output compare output pins
@@ -66,9 +66,10 @@ ISR runs).
   (doesn't change the timer or set the OCF0x flag, but apparently the OC0x pin goes high)
 
 ISR(TIMER0_COMPA_vect) { ... }  If TIMSK0 = 2, we'll interrupt when timer0 (TCNT0?) == OCR0A
+```
 
-
-16-bit timer1 registers:    n is timer number (1 or 3), x is the output compare channel (a or b)
+### Timer1 Registers
+```
   TCNT1H, TCNT1L, TCNT3H, TCNT3L -- the counter
     write the high byte first. it gets stored in a shared temp reg and written all at once.  read low byte first.
     You can access the entire register in C and the compiler will do the right thing: TCNT1 = 0x1FF;
@@ -94,8 +95,10 @@ ISR(TIMER0_COMPA_vect) { ... }  If TIMSK0 = 2, we'll interrupt when timer0 (TCNT
     TOV1 TOV3: timer overflow interrupt fired.  See table 14-4 for behavior.
   PRTIM1, PRTIM3 -- power reduction timer, write one to disable or zero to enable the corresponding timer.  they come powered up.
   OCF1C OCF1B OCF1A -
+```
 
-
+### Timer2 Registers
+```
 8-bit timer2 registers:
   The big difference between this and timer0 is the option of using a crystal to get much more accurate timing.
   First, PRTIM2 in PRR0 must be 0 so this timer is powered.
@@ -125,6 +128,8 @@ ISR(TIMER0_COMPA_vect) { ... }  If TIMSK0 = 2, we'll interrupt when timer0 (TCNT
     TSM -- Timer/Counter Synchronization Mode: keeps timers halted until cleared so clocks can be synchronized.
     PSRASY -- Prescaler Reset Timer/Counter 2: resets timer2, remains 1 until the prescaler has reset.  Not cleared if TSM is set.
     PSRSYNC -- if 1, all prescalers are being reset.
+```
 
-}}}
+## TODO
 
+Looks like all occurrences of OCRA in the docs are wrong...?  Isn't it supposed to be OCR0A?

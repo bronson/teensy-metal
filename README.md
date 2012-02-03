@@ -12,7 +12,9 @@ check the Makefile to be sure.
   takes around 1 second for usb_debug_only to connect, and that the first ~16 characters
   are buffered.
 
-* watcher: (rename me) shows status of D3.  Demonstrates simple I/O.
+* watcher: shows status of D3.  Demonstrates simple I/O.
+
+* pwm: shows how to use Clock1 to drive PWMs on pins OC1A and OC1B (PB5 and PB6)
 
 
 ## Thoughts
