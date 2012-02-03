@@ -8,7 +8,7 @@
 // This demonstrates both simple levels and continuous ramps.
 
 
-void clock1_init()
+void clock1_init(void)
 {
     // set up the clock 1 PWM:
     //   TCCR1A.COM1A=3    active high pwm on 1A
@@ -27,7 +27,7 @@ void clock1_init()
 //      for a 10 bit cycle, a 16 MHz count becomes a 15625 Hz cycle
 //      and a 15 KHz count becomes a 15Hz cycle.  You can see this with your own eyes.
 
-void flash_leds()
+void flash_leds(void)
 {
     // 0=off, max=maximum brightness
     while(1) {
@@ -43,7 +43,7 @@ void flash_leds()
 }
 
 
-void breathe_leds()
+void breathe_leds(void)
 {
     int i=0, j=0;              // current value of each led
     int idelta=4, jdelta=14;   // rate of change of the led (leds are incremented 100 times a second, range is 0..max)
@@ -87,11 +87,13 @@ void breathe_leds()
 }
 
 
-int main(void)
+void main(void) __attribute__((noreturn));
+void main(void)
 {
     CPU_PRESCALE(CPU_16MHz);
     usb_init();
     clock1_init();
+
     DDRB = (1<<5) | (1<<6);   // CONFIGURE PB5 and PB6 for output, everything else is input
 
     // change the if statement to select the demo
@@ -100,5 +102,7 @@ int main(void)
     } else {
         breathe_leds();
     }
+
+    while(1) { }
 }
 

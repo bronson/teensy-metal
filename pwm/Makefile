@@ -129,18 +129,31 @@ CPPDEFS = -DF_CPU=$(F_CPU)UL
 CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS)
 CFLAGS += -O$(OPT)
-CFLAGS += -funsigned-char
-CFLAGS += -funsigned-bitfields
-CFLAGS += -ffunction-sections
-CFLAGS += -fpack-struct
-CFLAGS += -fshort-enums
+CFLAGS += -funsigned-char             # plain char is unsigned
+CFLAGS += -funsigned-bitfields        # bitfields are unsigned
+CFLAGS += -ffunction-sections         # place functions in their own sections so linker can improve locality of reference
+CFLAGS += -fdata-sections             # same with data sections
+CFLAGS += -fpack-struct               # get rid of holes in structures
+CFLAGS += -fshort-enums               # enums are the smallest type that can store the maximum value, not int
+#CFLAGS += -ffreestanding              # turn off automatic builtin functions, support __attribute__((noreturn));
+CFLAGS += -fno-tree-scev-cprop        # vectorize outer loops?
+CFLAGS += -fno-jump-tables            # jump tables tend to be faster but larger
+CFLAGS += -mshort-calls               # use rjmp/rcall to save space but breaks if you need to jump >2Kwords.
+#CFLAGS += -mtiny-stack                # if you're sure you never use more than 256b of stack
+#CFLAGS += -fno-unit-at-a-time
+CFLAGS += --combine -fwhole-program   # if you compile all units in one go, gcc can optimize better
+
+# to make inlining less aggressive and potentially shrink code size
+#CFLAGS += --param inline-call-cost=2
+#CFLAGS += -finline-limit=3
+#CFLAGS += -fno-inline-small-functions
+
+
 CFLAGS += -Wall
 CFLAGS += -Wstrict-prototypes
-#CFLAGS += -mshort-calls
-#CFLAGS += -fno-unit-at-a-time
-#CFLAGS += -Wundef
-#CFLAGS += -Wunreachable-code
-#CFLAGS += -Wsign-compare
+CFLAGS += -Wundef
+CFLAGS += -Wunreachable-code
+CFLAGS += -Wsign-compare
 CFLAGS += -Wa,-adhlns=$(<:%.c=$(OBJDIR)/%.lst)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 CFLAGS += $(CSTANDARD)
